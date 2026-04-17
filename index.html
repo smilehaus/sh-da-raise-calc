@@ -325,7 +325,7 @@
         <label for="gA-fail" class="btn">Fail</label>
       </div>
 
-      <label>Gate B · Next-Tier Mastery</label>
+      <label>Gate B · Target-Tier Mastery</label>
       <div class="radio-row">
         <input type="radio" name="gateB" id="gB-pass" value="pass">
         <label for="gB-pass" class="btn">Pass</label>
@@ -334,6 +334,13 @@
         <input type="radio" name="gateB" id="gB-na" value="n/a">
         <label for="gB-na" class="btn">N/A</label>
       </div>
+      <div class="helper">OM certifies DA is proficient through the Target Tier selected below (all skills T1 → Target)</div>
+
+      <label for="targetTier">Promote To (Target Tier, if Gate B Pass)</label>
+      <select id="targetTier">
+        <!-- populated dynamically based on current tier -->
+      </select>
+      <div class="helper">Supports multi-tier jumps (e.g., T2 → T5) when the OM certifies mastery of every tier up to the target.</div>
 
       <button class="calc-btn" id="calc">Calculate Raise</button>
 
@@ -376,12 +383,17 @@ const MAX_SCORE = 115;
 function money(n) { return "$" + n.toFixed(2); }
 function round2(n) { return Math.round(n * 100) / 100; }
 
-function calculateRaise(tier, rate, score, gateA, gateB) {
+const TIER_ORDER = ["T1", "T2", "T3", "T4", "T5", "T6", "T7"];
+
+function tierIndex(code) { return TIER_ORDER.indexOf(code); }
+function tiersSkipped(fromCode, toCode) { return tierIndex(toCode) - tierIndex(fromCode); }
+
+function calculateRaise(tier, rate, score, gateA, gateB, targetTier) {
   const t = TIERS[tier];
   const r = {
-    tier, rate, score, gateA, gateB,
+    tier, rate, score, gateA, gateB, targetTier,
     newTier: tier, raiseAmt: 0, newRate: rate,
-    multiplier: t.x, reasoning: [], outcome: ""
+    multiplier: t.x, reasoning: [], outcome: "", tiersSkipped: 0
   };
 
   if (score < 55) {
@@ -401,26 +413,36 @@ function calculateRaise(tier, rate, score, gateA, gateB) {
   }
 
   const pointsAbove = score - THRESHOLD;
+  const targetIsPromotion = targetTier && tierIndex(targetTier) > tierIndex(tier);
+  const jumps = targetIsPromotion ? tiersSkipped(tier, targetTier) : 0;
 
-  // Promotion path
-  if (score >= 85 && gateB === "pass" && t.next !== null) {
-    const nt = TIERS[t.next];
+  // Promotion path — supports multi-tier skip (T2 → T5 etc.)
+  if (score >= 85 && gateB === "pass" && targetIsPromotion) {
+    const tt = TIERS[targetTier];
     const formulaRaise = round2(pointsAbove * t.x * 1.5);
-    const floorGap = round2(nt.floor - rate);
+    const floorGap = round2(tt.floor - rate);
     let effectiveRaise = Math.max(formulaRaise, floorGap);
     let newRate = rate + effectiveRaise;
-    if (newRate > nt.ceiling) {
-      newRate = nt.ceiling;
+    if (newRate > tt.ceiling) {
+      newRate = tt.ceiling;
       effectiveRaise = round2(newRate - rate);
     }
-    r.outcome = "PROMOTE";
+    r.outcome = jumps > 1 ? "MULTI_PROMOTE" : "PROMOTE";
     r.raiseAmt = effectiveRaise;
     r.newRate = newRate;
-    r.newTier = t.next;
-    r.reasoning.push(`Score ≥ 85 + Gate A pass + Gate B pass → PROMOTE to ${t.next}.`);
+    r.newTier = targetTier;
+    r.tiersSkipped = jumps;
+    if (jumps > 1) {
+      r.reasoning.push(`Score ≥ 85 + Gate A pass + Gate B pass through ${targetTier} → MULTI-TIER PROMOTION (${tier} → ${targetTier}, skipping ${jumps - 1} tier${jumps - 1 === 1 ? "" : "s"}).`);
+      r.reasoning.push("OM has certified mastery of every tier between current and target in Part IV checklist.");
+    } else {
+      r.reasoning.push(`Score ≥ 85 + Gate A pass + Gate B pass → PROMOTE to ${targetTier}.`);
+    }
     r.reasoning.push(`Formula raise: (${score} − 70) × $${t.x.toFixed(3)} × 1.5 = ${money(formulaRaise)}`);
-    if (floorGap > formulaRaise) r.reasoning.push(`Next-tier floor (${money(nt.floor)}) gap of ${money(floorGap)} exceeds formula; floor wins.`);
-    if (newRate === nt.ceiling) r.reasoning.push(`New rate capped at ${t.next} ceiling (${money(nt.ceiling)}).`);
+    if (floorGap > formulaRaise) {
+      r.reasoning.push(`Target-tier floor (${money(tt.floor)}) gap of ${money(floorGap)} exceeds formula; floor wins — this is how multi-tier skips are honored.`);
+    }
+    if (newRate === tt.ceiling) r.reasoning.push(`New rate capped at ${targetTier} ceiling (${money(tt.ceiling)}).`);
     return r;
   }
 
@@ -435,7 +457,9 @@ function calculateRaise(tier, rate, score, gateA, gateB) {
   r.raiseAmt = withinRaise;
   r.newRate = newRate;
   if (score >= 85 && gateB !== "pass" && t.next !== null) {
-    r.reasoning.push("Score ≥ 85 + Gate A pass, but Gate B FAIL → within-tier raise only. To promote, demonstrate next-tier competencies before next review.");
+    r.reasoning.push("Score ≥ 85 + Gate A pass, but Gate B FAIL → within-tier raise only. To promote, demonstrate target-tier competencies before next review.");
+  } else if (score >= 85 && !targetIsPromotion && t.next !== null) {
+    r.reasoning.push("Score ≥ 85 + Gate A pass, but no promotion target selected → within-tier raise.");
   } else if (score >= 85 && t.next === null) {
     r.reasoning.push("Score ≥ 85 at T7 (top of ladder) → within-tier raise. No further promotion.");
   } else {
@@ -462,11 +486,12 @@ function renderRefTable(activeTier) {
 
 function render(result) {
   const outcomeMap = {
-    PIP:         { label: "PIP or Separation",        cls: "bad"  },
-    COACHING:    { label: "Coaching Plan · No Raise", cls: "warn" },
-    GATE_A_FAIL: { label: "No Raise · Remediation",   cls: "warn" },
-    WITHIN_TIER: { label: "Within-Tier Raise",        cls: "good" },
-    PROMOTE:     { label: `PROMOTE to ${result.newTier}`, cls: "good" }
+    PIP:           { label: "PIP or Separation",        cls: "bad"  },
+    COACHING:      { label: "Coaching Plan · No Raise", cls: "warn" },
+    GATE_A_FAIL:   { label: "No Raise · Remediation",   cls: "warn" },
+    WITHIN_TIER:   { label: "Within-Tier Raise",        cls: "good" },
+    PROMOTE:       { label: `PROMOTE to ${result.newTier}`, cls: "good" },
+    MULTI_PROMOTE: { label: `MULTI-TIER PROMOTION → ${result.newTier}`, cls: "good" }
   };
   const o = outcomeMap[result.outcome] || { label: result.outcome, cls: "" };
   const lbl = document.getElementById("outcomeLabel");
@@ -493,12 +518,51 @@ function render(result) {
   `;
 }
 
+function populateTargetTier(currentTier) {
+  const sel = document.getElementById("targetTier");
+  const prev = sel.value;
+  sel.innerHTML = "";
+
+  // "Stay in Tier" option
+  const stay = document.createElement("option");
+  stay.value = currentTier;
+  stay.textContent = `Stay in ${currentTier} (no promotion)`;
+  sel.appendChild(stay);
+
+  // Promotion options — every tier above current
+  const curIdx = tierIndex(currentTier);
+  for (let i = curIdx + 1; i < TIER_ORDER.length; i++) {
+    const code = TIER_ORDER[i];
+    const t = TIERS[code];
+    const rateStr = t.floor === t.ceiling ? money(t.floor) : `${money(t.floor)}–${money(t.ceiling)}`;
+    const jumps = i - curIdx;
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = `${code} (${rateStr})${jumps > 1 ? ` — SKIP ${jumps - 1} tier${jumps - 1 === 1 ? "" : "s"}` : ""}`;
+    sel.appendChild(opt);
+  }
+
+  // Restore previous selection if still valid, else default to next tier
+  if ([...sel.options].some(o => o.value === prev)) {
+    sel.value = prev;
+  } else if (curIdx + 1 < TIER_ORDER.length) {
+    sel.value = TIER_ORDER[curIdx + 1];
+  }
+
+  // Disable if at T7 (no promotion possible)
+  sel.disabled = (curIdx === TIER_ORDER.length - 1);
+  if (sel.disabled) {
+    sel.innerHTML = `<option>T7 — top of ladder, no promotion available</option>`;
+  }
+}
+
 function handleCalc() {
-  const tier   = document.getElementById("tier").value;
-  const rate   = parseFloat(document.getElementById("rate").value) || 0;
-  const score  = parseInt(document.getElementById("score").value) || 0;
-  const gateA  = document.querySelector('input[name="gateA"]:checked').value;
-  const gateB  = document.querySelector('input[name="gateB"]:checked').value;
+  const tier        = document.getElementById("tier").value;
+  const rate        = parseFloat(document.getElementById("rate").value) || 0;
+  const score       = parseInt(document.getElementById("score").value) || 0;
+  const gateA       = document.querySelector('input[name="gateA"]:checked').value;
+  const gateB       = document.querySelector('input[name="gateB"]:checked').value;
+  const targetTier  = document.getElementById("targetTier").value || tier;
 
   if (score < 0 || score > MAX_SCORE) {
     alert(`Score must be between 0 and ${MAX_SCORE}.`);
@@ -509,14 +573,15 @@ function handleCalc() {
     return;
   }
 
-  const result = calculateRaise(tier, rate, score, gateA, gateB);
+  const result = calculateRaise(tier, rate, score, gateA, gateB, targetTier);
   renderRefTable(tier);
   render(result);
 }
 
-// Live-update the reference table highlight as tier changes
+// Live-update the reference table highlight + target tier options as tier changes
 document.getElementById("tier").addEventListener("change", (e) => {
   renderRefTable(e.target.value);
+  populateTargetTier(e.target.value);
 });
 
 document.getElementById("calc").addEventListener("click", handleCalc);
@@ -524,6 +589,7 @@ document.addEventListener("keydown", (e) => { if (e.key === "Enter") handleCalc(
 
 // Initial render
 renderRefTable(document.getElementById("tier").value);
+populateTargetTier(document.getElementById("tier").value);
 </script>
 </body>
 </html>
