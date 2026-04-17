@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smile Haus · DA Raise Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --alabaster: #F2EFE8;
+    --sandstone: #D6CDBD;
+    --taupe:     #C2B09E;
+    --earth:     #877765;
+    --onyx:      #2A2E31;
+    --white:     #FFFFFF;
+    --good:      #5B7A4F;
+    --bad:       #A35C48;
+    --warn:      #B8883C;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--alabaster);
+    color: var(--onyx);
+    font-family: 'Jost', sans-serif;
+    font-weight: 400;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+  }
+
+  /* Header */
+  header {
+    background: var(--onyx);
+    color: var(--alabaster);
+    text-align: center;
+    padding: 28px 20px 22px;
+    margin: -24px -20px 24px;
+  }
+  header .brand {
+    margin: 0 auto 6px;
+    display: block;
+    max-width: 260px;
+    height: auto;
+  }
+  header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 22px;
+    margin: 4px 0 2px;
+    color: var(--alabaster);
+  }
+  header .sub {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--taupe);
+    text-transform: uppercase;
+  }
+
+  /* Two-column layout */
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--white);
+    border: 1px solid var(--sandstone);
+    padding: 20px 22px;
+  }
+  .card h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-size: 18px;
+    margin: 0 0 14px;
+    color: var(--onyx);
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--sandstone);
+    padding-bottom: 8px;
+  }
+
+  label {
+    display: block;
+    font-size: 10px;
+    color: var(--earth);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin: 12px 0 4px;
+  }
+  select, input[type="number"] {
+    width: 100%;
+    border: 1px solid var(--sandstone);
+    background: var(--alabaster);
+    padding: 10px 12px;
+    font-family: 'Jost', sans-serif;
+    font-size: 14px;
+    color: var(--onyx);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  select:focus, input[type="number"]:focus {
+    border-color: var(--earth);
+  }
+  .helper {
+    font-size: 11px;
+    color: var(--earth);
+    margin-top: 4px;
+    font-style: italic;
+  }
+
+  .radio-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .radio-row label.btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 8px;
+    border: 1px solid var(--sandstone);
+    background: var(--alabaster);
+    color: var(--onyx);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-weight: 500;
+    margin: 0;
+    text-align: center;
+    transition: all 0.15s;
+  }
+  .radio-row input[type="radio"] { display: none; }
+  .radio-row input[type="radio"]:checked + label.btn {
+    background: var(--onyx);
+    color: var(--alabaster);
+    border-color: var(--onyx);
+  }
+
+  .calc-btn {
+    display: block;
+    width: 100%;
+    background: var(--earth);
+    color: var(--alabaster);
+    border: none;
+    padding: 14px;
+    font-family: 'Jost', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 18px;
+    transition: background 0.15s;
+  }
+  .calc-btn:hover { background: var(--onyx); }
+
+  /* Result panel */
+  .result {
+    background: var(--white);
+    border: 1px solid var(--sandstone);
+    padding: 22px;
+  }
+  .result-header {
+    background: var(--onyx);
+    color: var(--alabaster);
+    margin: -22px -22px 16px;
+    padding: 14px 22px;
+    text-align: center;
+  }
+  .result-header .outcome {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-size: 22px;
+    letter-spacing: 0.05em;
+  }
+  .outcome.good  { color: #B7D4A8; }
+  .outcome.bad   { color: #E4A48D; }
+  .outcome.warn  { color: #E8C87A; }
+
+  .kv {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--sandstone);
+    font-size: 13px;
+  }
+  .kv:last-child { border-bottom: none; }
+  .kv .k {
+    color: var(--earth);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 10px;
+    font-weight: 600;
+    align-self: center;
+  }
+  .kv .v {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--onyx);
+  }
+  .kv .v.big {
+    font-size: 26px;
+  }
+  .kv .v.good { color: var(--good); }
+  .kv .v.bad  { color: var(--bad); }
+  .kv .v.warn { color: var(--warn); }
+
+  .reasoning {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--sandstone);
+  }
+  .reasoning h3 {
+    font-size: 10px;
+    color: var(--earth);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin: 0 0 8px;
+  }
+  .reasoning ul {
+    margin: 0;
+    padding-left: 18px;
+  }
+  .reasoning li {
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--onyx);
+    margin-bottom: 4px;
+  }
+
+  .empty-state {
+    text-align: center;
+    color: var(--earth);
+    font-style: italic;
+    font-size: 13px;
+    padding: 40px 20px;
+  }
+
+  /* Tier multiplier reference mini-table */
+  .ref-table {
+    margin-top: 18px;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  .ref-table th {
+    background: var(--earth);
+    color: var(--alabaster);
+    text-align: left;
+    padding: 6px 8px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 9px;
+  }
+  .ref-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--sandstone);
+  }
+  .ref-table tr.active td {
+    background: var(--alabaster);
+    font-weight: 500;
+  }
+
+  footer {
+    text-align: center;
+    font-size: 10px;
+    color: var(--earth);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 28px;
+    padding-top: 14px;
+    border-top: 1px solid var(--sandstone);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img class="brand" src="logo-white.png" alt="Smile Haus" />
+    <h1>DA Raise Calculator</h1>
+    <div class="sub">Annual Review · Two-Gate Formula</div>
+  </header>
+
+  <div class="grid">
+    <!-- ===== INPUT CARD ===== -->
+    <section class="card">
+      <h2>Inputs</h2>
+
+      <label for="tier">Current Tier</label>
+      <select id="tier">
+        <option value="T1">T1 — $17 · Entry, just graduated</option>
+        <option value="T2">T2 — $18 · Solo assist, FMX, charting</option>
+        <option value="T3" selected>T3 — $19–20 · Crown &amp; bridge, iTero</option>
+        <option value="T4">T4 — $21–22 · Multi-temps, surgery assist</option>
+        <option value="T5">T5 — $23–24 · Back-office lead (2+ yrs)</option>
+        <option value="T6">T6 — $25–26 · FD coverage, trains DAs</option>
+        <option value="T7">T7 — $27–29 · Complex tx, OM coverage</option>
+      </select>
+
+      <label for="rate">Current Hourly Rate ($)</label>
+      <input id="rate" type="number" step="0.01" min="0" max="100" value="19.00" />
+
+      <label for="score">Total Review Score (0–115)</label>
+      <input id="score" type="number" step="1" min="0" max="115" value="95" />
+      <div class="helper">Part I (KPIs /40) + Part II (Performance /75) from annual review</div>
+
+      <label>Gate A · Current-Tier Mastery</label>
+      <div class="radio-row">
+        <input type="radio" name="gateA" id="gA-pass" value="pass" checked>
+        <label for="gA-pass" class="btn">Pass</label>
+        <input type="radio" name="gateA" id="gA-fail" value="fail">
+        <label for="gA-fail" class="btn">Fail</label>
+      </div>
+
+      <label>Gate B · Next-Tier Mastery</label>
+      <div class="radio-row">
+        <input type="radio" name="gateB" id="gB-pass" value="pass">
+        <label for="gB-pass" class="btn">Pass</label>
+        <input type="radio" name="gateB" id="gB-fail" value="fail" checked>
+        <label for="gB-fail" class="btn">Fail</label>
+        <input type="radio" name="gateB" id="gB-na" value="n/a">
+        <label for="gB-na" class="btn">N/A</label>
+      </div>
+
+      <button class="calc-btn" id="calc">Calculate Raise</button>
+
+      <table class="ref-table" id="refTable">
+        <thead>
+          <tr><th>Tier</th><th>Rate</th><th>x / pt</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <!-- ===== RESULT CARD ===== -->
+    <section class="result" id="resultCard">
+      <div class="result-header">
+        <div class="outcome" id="outcomeLabel">Fill in inputs and calculate</div>
+      </div>
+      <div id="resultBody">
+        <div class="empty-state">Results will appear here after you click<br><b>Calculate Raise</b></div>
+      </div>
+    </section>
+  </div>
+
+  <footer>Smile Haus · Confidential HR Tool · For OM &amp; Leadership Use</footer>
+</div>
+
+<script>
+// ===== Tier config (mirrors da-raise-calc.py) =====
+const TIERS = {
+  T1: { floor: 17.00, ceiling: 17.00, x: 0.015, next: "T2", label: "Entry — Just Graduated" },
+  T2: { floor: 18.00, ceiling: 18.00, x: 0.018, next: "T3", label: "Entry Solo Assist" },
+  T3: { floor: 19.00, ceiling: 20.00, x: 0.020, next: "T4", label: "Crown & Bridge Proficient" },
+  T4: { floor: 21.00, ceiling: 22.00, x: 0.022, next: "T5", label: "Multi-Temps, Surgery, Tx Present" },
+  T5: { floor: 23.00, ceiling: 24.00, x: 0.025, next: "T6", label: "Back-Office Lead (2+ yrs)" },
+  T6: { floor: 25.00, ceiling: 26.00, x: 0.028, next: "T7", label: "FD Coverage & DA Trainer" },
+  T7: { floor: 27.00, ceiling: 29.00, x: 0.030, next: null, label: "Complex Tx, OM Coverage" }
+};
+const THRESHOLD = 70;
+const MAX_SCORE = 115;
+
+function money(n) { return "$" + n.toFixed(2); }
+function round2(n) { return Math.round(n * 100) / 100; }
+
+function calculateRaise(tier, rate, score, gateA, gateB) {
+  const t = TIERS[tier];
+  const r = {
+    tier, rate, score, gateA, gateB,
+    newTier: tier, raiseAmt: 0, newRate: rate,
+    multiplier: t.x, reasoning: [], outcome: ""
+  };
+
+  if (score < 55) {
+    r.outcome = "PIP";
+    r.reasoning.push("Score below 55 → Performance Improvement Plan or separation. No raise.");
+    return r;
+  }
+  if (score < 70) {
+    r.outcome = "COACHING";
+    r.reasoning.push("Score 55–69 → Written coaching plan. No raise. 90-day re-evaluation.");
+    return r;
+  }
+  if (gateA !== "pass") {
+    r.outcome = "GATE_A_FAIL";
+    r.reasoning.push("Gate A FAIL: DA has not demonstrated current-tier mastery. No raise. Skill remediation plan required.");
+    return r;
+  }
+
+  const pointsAbove = score - THRESHOLD;
+
+  // Promotion path
+  if (score >= 85 && gateB === "pass" && t.next !== null) {
+    const nt = TIERS[t.next];
+    const formulaRaise = round2(pointsAbove * t.x * 1.5);
+    const floorGap = round2(nt.floor - rate);
+    let effectiveRaise = Math.max(formulaRaise, floorGap);
+    let newRate = rate + effectiveRaise;
+    if (newRate > nt.ceiling) {
+      newRate = nt.ceiling;
+      effectiveRaise = round2(newRate - rate);
+    }
+    r.outcome = "PROMOTE";
+    r.raiseAmt = effectiveRaise;
+    r.newRate = newRate;
+    r.newTier = t.next;
+    r.reasoning.push(`Score ≥ 85 + Gate A pass + Gate B pass → PROMOTE to ${t.next}.`);
+    r.reasoning.push(`Formula raise: (${score} − 70) × $${t.x.toFixed(3)} × 1.5 = ${money(formulaRaise)}`);
+    if (floorGap > formulaRaise) r.reasoning.push(`Next-tier floor (${money(nt.floor)}) gap of ${money(floorGap)} exceeds formula; floor wins.`);
+    if (newRate === nt.ceiling) r.reasoning.push(`New rate capped at ${t.next} ceiling (${money(nt.ceiling)}).`);
+    return r;
+  }
+
+  // Within-tier
+  let withinRaise = round2(pointsAbove * t.x * 1.0);
+  let newRate = rate + withinRaise;
+  if (newRate > t.ceiling) {
+    newRate = t.ceiling;
+    withinRaise = round2(newRate - rate);
+  }
+  r.outcome = "WITHIN_TIER";
+  r.raiseAmt = withinRaise;
+  r.newRate = newRate;
+  if (score >= 85 && gateB !== "pass" && t.next !== null) {
+    r.reasoning.push("Score ≥ 85 + Gate A pass, but Gate B FAIL → within-tier raise only. To promote, demonstrate next-tier competencies before next review.");
+  } else if (score >= 85 && t.next === null) {
+    r.reasoning.push("Score ≥ 85 at T7 (top of ladder) → within-tier raise. No further promotion.");
+  } else {
+    r.reasoning.push("Score 70–84 + Gate A pass → within-tier raise (Meets / Exceeds band).");
+  }
+  r.reasoning.push(`Formula raise: (${score} − 70) × $${t.x.toFixed(3)} × 1.0 = ${money(withinRaise)}`);
+  if (newRate === t.ceiling && rate < t.ceiling) {
+    r.reasoning.push(`New rate capped at ${tier} ceiling (${money(t.ceiling)}).`);
+  }
+  return r;
+}
+
+function renderRefTable(activeTier) {
+  const body = document.querySelector("#refTable tbody");
+  body.innerHTML = "";
+  Object.entries(TIERS).forEach(([k, v]) => {
+    const rateStr = v.floor === v.ceiling ? money(v.floor) : `${money(v.floor)}–${money(v.ceiling)}`;
+    const tr = document.createElement("tr");
+    if (k === activeTier) tr.classList.add("active");
+    tr.innerHTML = `<td><b>${k}</b></td><td>${rateStr}</td><td>$${v.x.toFixed(3)}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+function render(result) {
+  const outcomeMap = {
+    PIP:         { label: "PIP or Separation",        cls: "bad"  },
+    COACHING:    { label: "Coaching Plan · No Raise", cls: "warn" },
+    GATE_A_FAIL: { label: "No Raise · Remediation",   cls: "warn" },
+    WITHIN_TIER: { label: "Within-Tier Raise",        cls: "good" },
+    PROMOTE:     { label: `PROMOTE to ${result.newTier}`, cls: "good" }
+  };
+  const o = outcomeMap[result.outcome] || { label: result.outcome, cls: "" };
+  const lbl = document.getElementById("outcomeLabel");
+  lbl.textContent = o.label;
+  lbl.className = "outcome " + o.cls;
+
+  const pct = result.rate > 0 ? ((result.raiseAmt / result.rate) * 100) : 0;
+  const tierObj = TIERS[result.newTier];
+  const rateStr = tierObj.floor === tierObj.ceiling
+    ? money(tierObj.floor)
+    : `${money(tierObj.floor)}–${money(tierObj.ceiling)}`;
+
+  const body = document.getElementById("resultBody");
+  body.innerHTML = `
+    <div class="kv"><span class="k">Raise</span><span class="v big ${o.cls}">+${money(result.raiseAmt)}/hr</span></div>
+    <div class="kv"><span class="k">New Rate</span><span class="v big">${money(result.newRate)}/hr</span></div>
+    <div class="kv"><span class="k">% Change</span><span class="v">${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%</span></div>
+    <div class="kv"><span class="k">New Tier</span><span class="v">${result.newTier} · ${tierObj.label} (${rateStr})</span></div>
+    <div class="kv"><span class="k">Multiplier Used</span><span class="v">$${result.multiplier.toFixed(3)} / pt</span></div>
+    <div class="reasoning">
+      <h3>Reasoning</h3>
+      <ul>${result.reasoning.map(r => `<li>${r}</li>`).join("")}</ul>
+    </div>
+  `;
+}
+
+function handleCalc() {
+  const tier   = document.getElementById("tier").value;
+  const rate   = parseFloat(document.getElementById("rate").value) || 0;
+  const score  = parseInt(document.getElementById("score").value) || 0;
+  const gateA  = document.querySelector('input[name="gateA"]:checked').value;
+  const gateB  = document.querySelector('input[name="gateB"]:checked').value;
+
+  if (score < 0 || score > MAX_SCORE) {
+    alert(`Score must be between 0 and ${MAX_SCORE}.`);
+    return;
+  }
+  if (rate <= 0) {
+    alert("Please enter a valid hourly rate.");
+    return;
+  }
+
+  const result = calculateRaise(tier, rate, score, gateA, gateB);
+  renderRefTable(tier);
+  render(result);
+}
+
+// Live-update the reference table highlight as tier changes
+document.getElementById("tier").addEventListener("change", (e) => {
+  renderRefTable(e.target.value);
+});
+
+document.getElementById("calc").addEventListener("click", handleCalc);
+document.addEventListener("keydown", (e) => { if (e.key === "Enter") handleCalc(); });
+
+// Initial render
+renderRefTable(document.getElementById("tier").value);
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# Netlify config for SH DA Raise Calculator (static single-page app)
+# Allows iframe embedding from ClickUp and other Smile Haus tools.
+
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Allow ClickUp to embed this via iframe
+    Content-Security-Policy = "frame-ancestors 'self' https://app.clickup.com https://*.clickup.com https://smilehaus.com https://*.smilehaus.com"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    # Explicitly allow embedding (replaces legacy X-Frame-Options)
+    Permissions-Policy = "interest-cohort=()"
